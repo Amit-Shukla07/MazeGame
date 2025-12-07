@@ -72,9 +72,32 @@ function App() {
   };
 
   const handleKeyDown = (e) => {
+    const { key } = e;
+
+    const movementKeys = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','W','a','A','s','S','d','D']);
+    const hintKeys = new Set(['h','H']);
+    const restartKeys = new Set(['r','R']);
+
+    // Prevent page from scrolling when using movement/hint/restart keys
+    if (movementKeys.has(key) || hintKeys.has(key) || restartKeys.has(key)) {
+      e.preventDefault();
+    }
+
+    // Restart
+    if (restartKeys.has(key)) {
+      startNewGame(level);
+      return;
+    }
+
+    // Hint
+    if (hintKeys.has(key)) {
+      handleSolve();
+      return;
+    }
+
+    // Movement only when playing
     if (gameStatus !== 'playing') return;
 
-    const { key } = e;
     let nextX = playerPos.x;
     let nextY = playerPos.y;
 
