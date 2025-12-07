@@ -8,6 +8,8 @@ html, body {
   background-color: #1a1a1a;
   color: white;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -15,6 +17,50 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 320px;
+  height: 100vh;
+  overflow: hidden;
+  padding: 0;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+}
+
+body.allow-scroll {
+  position: static;
+  height: auto;
   min-height: 100vh;
-  overflow: hidden; /* Prevent page from scrolling while playing */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Smooth touch interactions and disable long-press context menu */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, button, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input {
+  font-size: 16px;
+}
+
+/* Mobile-friendly viewport */
+@media (max-width: 640px) {
+  body {
+    overflow-y: auto;
+  }
 }
