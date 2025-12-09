@@ -21,14 +21,16 @@ function App() {
   
   const timerRef = useRef(null);
 
+  const [isGameActive, setIsGameActive] = useState(false);
+
   // Initialize game
   useEffect(() => {
-    startNewGame('Hard');
+    // Wait for user to start
   }, []);
 
   // Timer Logic (single interval while playing)
   useEffect(() => {
-    if (gameStatus !== 'playing') return;
+    if (gameStatus !== 'playing' || !isGameActive) return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
@@ -42,7 +44,12 @@ function App() {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [gameStatus]);
+  }, [gameStatus, isGameActive]);
+
+  const startGameWrapper = (selectedLevel) => {
+    setIsGameActive(true);
+    startNewGame(selectedLevel);
+  };
 
   const startNewGame = (selectedLevel = level) => {
     clearInterval(timerRef.current);
@@ -72,7 +79,7 @@ function App() {
   };
 
   const movePlayer = (dx, dy) => {
-    if (gameStatus !== 'playing') return;
+    if (gameStatus !== 'playing' || !isGameActive) return;
     const nextX = playerPos.x + dx;
     const nextY = playerPos.y + dy;
     if (isValidMove(nextX, nextY)) {
@@ -82,6 +89,7 @@ function App() {
   };
 
   const handleKeyDown = (e) => {
+    if (!isGameActive) return;
     const { key } = e;
 
     const movementKeys = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','W','a','A','s','S','d','D']);
@@ -125,6 +133,7 @@ function App() {
   };
 
   const handleTouchEnd = (e) => {
+    if (!isGameActive) return;
     const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
     const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
     const minSwipeDistance = 30;
@@ -144,7 +153,7 @@ function App() {
 
   // Lock viewport when playing to prevent mobile screen jump
   useEffect(() => {
-    if (gameStatus === 'playing') {
+    if (gameStatus === 'playing' && isGameActive) {
       document.body.classList.remove('allow-scroll');
       document.body.style.top = '0';
     } else {
@@ -153,7 +162,7 @@ function App() {
     return () => {
       document.body.classList.remove('allow-scroll');
     };
-  }, [gameStatus]);
+  }, [gameStatus, isGameActive]);
 
   const isValidMove = (x, y) => {
     if (!maze.length) return false;
@@ -170,7 +179,7 @@ function App() {
   };
 
   const handleSolve = () => {
-    if (gameStatus !== 'playing') return;
+    if (gameStatus !== 'playing' || !isGameActive) return;
     const path = solveMazeBFS(maze, playerPos, exitPos);
     setSolutionPath(path);
   };
@@ -178,11 +187,48 @@ function App() {
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [playerPos, gameStatus]);
+  }, [playerPos, gameStatus, isGameActive]);
+
+  // Start Screen Overlay
+  if (!isGameActive) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        {/* Animated Background Effect */}
+        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(59,130,246,0.3),transparent_70%)] animate-pulse"></div>
+        </div>
+
+        <div className="z-10 text-center max-w-md w-full bg-gray-800/50 backdrop-blur-xl p-8 rounded-2xl border border-gray-700 shadow-2xl transform transition-all hover:scale-105">
+          <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-6 drop-shadow-lg">
+            Maze Master
+          </h1>
+          <p className="text-gray-300 mb-8 text-lg">Use your wits to escape before time runs out!</p>
+          
+          <div className="grid gap-4 mb-8">
+             <div className="flex items-center justify-between text-gray-400 bg-gray-900/50 p-3 rounded-lg">
+                <span className="flex items-center gap-2"><ArrowUp size={18} /> Move</span>
+                <span className="font-mono text-sm">Arrows / WASD</span>
+             </div>
+             <div className="flex items-center justify-between text-gray-400 bg-gray-900/50 p-3 rounded-lg">
+                <span className="flex items-center gap-2"><Lightbulb size={18} /> Hint</span>
+                <span className="font-mono text-sm">H Key</span>
+             </div>
+          </div>
+
+          <button 
+            onClick={() => startGameWrapper(level)}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold rounded-xl text-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
+          >
+            Start Game <ArrowRight size={24} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
-      className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-2 sm:p-4 w-full h-full"
+      className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-2 sm:p-4 w-full h-full relative"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -191,13 +237,13 @@ function App() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           {/* Title and Levels */}
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Maze Runner</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 hidden sm:block">Maze Runner</h1>
             <div className="flex gap-2">
               {Object.keys(LEVELS).map(lvl => (
                 <button
                   key={lvl}
                   onClick={() => startNewGame(lvl)}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full border transition-all ${level === lvl ? 'bg-blue-600 border-blue-400 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-400'}`}
+                  className={`px-3 py-1.5 text-xs sm:text-sm rounded-full border transition-all ${level === lvl ? 'bg-blue-600 border-blue-400 text-white shadow-md shadow-blue-500/20' : 'border-gray-600 text-gray-400 hover:border-gray-400'}`}
                 >
                   {lvl}
                 </button>
@@ -217,7 +263,7 @@ function App() {
             <button 
               onClick={handleSolve}
               title="Hint (H)"
-              className="p-2 sm:p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-yellow-400 border border-gray-700 transition-all active:bg-gray-600 flex-shrink-0"
+              className="p-2 sm:p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-yellow-400 border border-gray-700 transition-all active:bg-gray-600 flex-shrink-0 shadow-lg"
             >
               <Lightbulb size={20} className="sm:w-6 sm:h-6" />
             </button>
@@ -225,7 +271,7 @@ function App() {
             <button 
               onClick={() => startNewGame(level)}
               title="Restart (R)"
-              className="p-2 sm:p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white border border-gray-700 transition-all active:bg-gray-600 flex-shrink-0"
+              className="p-2 sm:p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white border border-gray-700 transition-all active:bg-gray-600 flex-shrink-0 shadow-lg"
             >
               <RefreshCw size={20} className="sm:w-6 sm:h-6" />
             </button>
@@ -234,8 +280,13 @@ function App() {
       </div>
       
       {/* Game Area - Responsive */}
-      <div className="relative border-2 sm:border-4 border-gray-800 rounded-lg sm:rounded-xl overflow-hidden shadow-2xl w-full max-w-5xl flex-1 flex items-center justify-center min-h-0">
+      <div className="relative border-4 border-gray-800 rounded-xl overflow-hidden shadow-2xl w-full max-w-5xl flex-1 flex items-center justify-center min-h-0 bg-gray-950">
         <MazeGrid maze={maze} playerPos={playerPos} solutionPath={solutionPath} />
+        
+        {/* On-Screen Controls Overlay (Bottom Right or Centered on Mobile) */}
+        <div className="absolute bottom-4 right-4 z-20 hidden md:block opacity-50 hover:opacity-100 transition-opacity">
+            {/* Desktop hint regarding controls could go here, but avoiding clutter */}
+        </div>
         
         {/* Overlays */}
         {gameStatus === 'won' && (
@@ -271,22 +322,64 @@ function App() {
         )}
       </div>
 
-      {/* Legend - Responsive */}
-      <div className="mt-2 sm:mt-6 flex flex-wrap gap-3 sm:gap-8 text-gray-500 text-xs sm:text-sm justify-center px-2 flex-shrink-0">
-        <span className="flex items-center gap-2"><div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-200 rounded-sm"></div> Path</span>
-        <span className="flex items-center gap-2"><div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-900 border border-gray-700 rounded-sm"></div> Wall</span>
-        <span className="flex items-center gap-2"><div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-600 rounded-full"></div> You</span>
-        <span className="flex items-center gap-2"><div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded-sm"></div> Exit</span>
-      </div>
+      {/* D-Pad Controls Section */}
+      <div className="mt-6 w-full flex justify-center items-center gap-10">
+        {/* Legend */}
+        <div className="hidden sm:flex flex-wrap gap-4 text-gray-500 text-xs sm:text-sm justify-center">
+            <span className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-200 rounded-sm shadow-[0_0_10px_rgba(255,255,255,0.2)]"></div> Path</span>
+            <span className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-800 border border-gray-600 rounded-sm"></div> Wall</span>
+            <span className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div> You</span>
+            <span className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-500 rounded-sm shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div> Exit</span>
+        </div>
 
-      {/* Mobile Controls Info */}
-      <div className="mt-2 sm:hidden text-gray-400 text-xs text-center px-2 flex-shrink-0">
-        <p>Swipe to move • Tap hint (💡) & restart (↻) buttons</p>
-      </div>
-      
-      {/* Desktop Controls Info */}
-      <div className="mt-2 hidden sm:block text-gray-400 text-xs text-center flex-shrink-0">
-        <p>Use Arrow/WASD to move • Press H for hint • Press R to restart</p>
+        {/* Mobile/Touch Controls - Premium Look */}
+        <div className="flex flex-col items-center gap-3 bg-gray-900/80 p-6 rounded-[2rem] border border-gray-700/50 shadow-2xl backdrop-blur-xl transform transition-transform hover:scale-105 duration-300">
+            {/* Common Button Style */}
+            {(() => {
+                const btnStyle = "relative w-16 h-16 rounded-2xl bg-gradient-to-b from-gray-700 to-gray-800 border-t border-gray-600 shadow-[0_6px_0_0_rgba(0,0,0,0.4),0_10px_10px_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-[6px] active:border-t-0 transition-all flex items-center justify-center group overflow-hidden";
+                const glow = "absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/10 transition-colors duration-300";
+                const iconStyle = "text-gray-300 group-hover:text-blue-400 group-active:text-blue-200 transition-colors transform group-active:scale-90";
+
+                return (
+                    <>
+                        <button 
+                            className={btnStyle}
+                            onPointerDown={(e) => { e.preventDefault(); movePlayer(0, -1); }}
+                            aria-label="Move Up"
+                        >
+                            <div className={glow}></div>
+                            <ArrowUp size={32} className={iconStyle} strokeWidth={2.5} />
+                        </button>
+                        <div className="flex gap-3">
+                            <button 
+                                className={btnStyle}
+                                onPointerDown={(e) => { e.preventDefault(); movePlayer(-1, 0); }}
+                                aria-label="Move Left"
+                            >
+                                <div className={glow}></div>
+                                <ArrowLeft size={32} className={iconStyle} strokeWidth={2.5} />
+                            </button>
+                            <button 
+                                className={btnStyle}
+                                onPointerDown={(e) => { e.preventDefault(); movePlayer(0, 1); }}
+                                aria-label="Move Down"
+                            >
+                                <div className={glow}></div>
+                                <ArrowDown size={32} className={iconStyle} strokeWidth={2.5} />
+                            </button>
+                            <button 
+                                className={btnStyle}
+                                onPointerDown={(e) => { e.preventDefault(); movePlayer(1, 0); }}
+                                aria-label="Move Right"
+                            >
+                                <div className={glow}></div>
+                                <ArrowRight size={32} className={iconStyle} strokeWidth={2.5} />
+                            </button>
+                        </div>
+                    </>
+                );
+            })()}
+        </div>
       </div>
     </div>
   );
