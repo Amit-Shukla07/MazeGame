@@ -82,7 +82,7 @@ client/
 |--------|--------|-------|
 | Easy   | 15×15  | 30s   |
 | Medium | 25×25  | 45s   |
-| Hard   | 35×25  | 60s   |
+| Hard   | 35×35  | 60s   |
 
 Notes on implementation
 - Maze generation is done in-browser and produces a solvable "perfect" maze, then the start/end cells are marked.
